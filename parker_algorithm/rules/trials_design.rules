@@ -1,0 +1,40 @@
+-- Attributes
+@open:STRING
+@single_blind:STRING
+@double_blind:STRING
+@randomised:STRING
+@controlled:STRING
+@placebo:STRING
+@active_comparator:STRING
+@crossover:STRING
+@parallel_group:STRING
+@arms:STRING
+
+-- Overview of attributes
+open notin {'Yes', 'No'}
+single_blind notin {'Yes', 'No'}
+double_blind notin {'Yes', 'No'}
+randomised notin {'Yes', 'No'}
+controlled notin {'Yes', 'No'}
+placebo notin {'Yes', 'No'}
+active_comparator notin {'Yes', 'No'}
+crossover notin {'Yes', 'No'}
+parallel_group notin {'Yes', 'No'}
+arms notin {'0', '1', '2+'}
+
+-- eudract rules for masking
+open == 'Yes' & single_blind == 'Yes'
+open == 'Yes' & double_blind == 'Yes'
+single_blind == 'Yes' & double_blind == 'Yes'
+open == 'No' & single_blind == 'No' & double_blind == 'No'
+
+-- eudract rules for control
+controlled == 'No' & placebo == 'Yes'
+controlled == 'No' & active_comparator == 'Yes'
+
+-- crossover and parallel cannot occur simultaneously
+parallel_group == 'Yes' & crossover == 'Yes'
+
+-- arms check
+arms in {'0', '1'} & placebo == 'Yes'
+arms in {'0', '1'} & active_comparator == 'Yes'

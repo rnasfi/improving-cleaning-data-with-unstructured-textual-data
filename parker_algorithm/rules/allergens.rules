@@ -1,0 +1,54 @@
+-- Attribute contracts
+@nuts:integer
+@almondnuts:integer
+@brazil_nuts:integer
+@macadamia_nuts:integer
+@hazelnut:integer
+@pistachio:integer
+@walnut:integer
+@cashew:integer
+@celery:integer
+@crustaceans:integer
+@eggs:integer
+@fish:integer
+@gluten:integer
+@lupin:integer
+@milk:integer
+@molluscs:integer
+@mustard:integer
+@peanut:integer
+@sesame:integer
+@soy:integer
+@sulfite:integer
+
+--Domain rules
+nuts notin {0,1,2}
+almondnuts notin {0,1,2}
+brazil_nuts notin {0,1,2}
+macadamia_nuts notin {0,1,2}
+hazelnut notin {0,1,2}
+pistachio notin {0,1,2}
+walnut notin {0,1,2}
+cashew notin {0,1,2}
+celery notin {0,1,2}
+crustaceans notin {0,1,2}
+eggs notin {0,1,2}
+fish notin {0,1,2}
+gluten notin {0,1,2}
+lupin notin {0,1,2}
+milk notin {0,1,2}
+molluscs notin {0,1,2}
+mustard notin {0,1,2}
+peanut notin {0,1,2}
+sesame notin {0,1,2}
+soy notin {0,1,2}
+sulfite notin {0,1,2}
+
+--Sigma interactions
+nuts < almondnuts
+nuts < brazil_nuts
+nuts < macadamia_nuts
+nuts < hazelnut
+nuts < pistachio
+nuts < walnut
+nuts < cashew
