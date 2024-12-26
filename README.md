@@ -7,11 +7,67 @@ A description of use case examples can be found [here](docs/examples.md) to text
 
 ## Approach
 An overview of the data cleaning data is decribed [here](docs/approach.md)
+
+
+## Set up a virtual environment using pip and Virtualenv
+
+If you are familiar with `virtualenv`, you can use it to create 
+a virtual environment.
+
+For Python 3.6, create a new environment
+with your preferred virtualenv wrapper, for example:
+
+* [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/latest/) (Bourne-shells)
+* [virtualfish](https://virtualfish.readthedocs.io/en/latest/) (fish-shell)
+
+
+Either follow instructions [here](https://virtualenv.pypa.io/en/stable/installation/) or install via
+`pip`.
+```bash
+$ pip install virtualenv
+```
+
+Then, create a `virtualenv` environment by creating a new directory for a Python 3.6 virtualenv environment
+```bash
+$ mkdir -p ump
+$ virtualenv --python=python3.10 ump
+```
+where `python3.6` is a valid reference to a Python 3.6 executable.
+
+Activate the environment
+```bash
+$ source ump/bin/activate
+```
+
+#### Install the required python packages
+
+*Note: make sure that the environment is activated throughout the installation process.
+When you are done, deactivate it using* 
+`conda deactivate`, `source deactivate`, *or* `deactivate` 
+*depending on your version*.
+
+In the project root directory, run the following to install the required packages.
+Note that this commands installs the packages within the activated virtual environment.
+
+```bash
+$ pip install -r requirements.txt
+```
+*Note for macOS Users:*
+you may need to install XCode developer tools using `xcode-select --install`.
+
+
+#### Make the start example file executable
+```bash
+$ chmod +x ./start_example.sh
+```
+
 ### Selection of training samples
+
 
 ### Training ML model
 
-### Reapairing dirty data
+### Repairing dirty data
+
 
 
 

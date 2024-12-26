@@ -41,7 +41,7 @@ public class Data_engineering {
         "tf-idf-mnb",
         "count-vect-mnb",
         "bert-ann",};
-    public static boolean per_attribute = false;
+    public static boolean per_attribute = true;
     
 
     public static void main(String[] args) throws DataReadException, IOException, RepairException, DataWriteException, FileNotFoundException, InterruptedException, BindingException {
