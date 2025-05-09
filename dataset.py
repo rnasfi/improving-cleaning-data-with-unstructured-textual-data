@@ -1,5 +1,7 @@
 import pandas as pd
+import logging
 import preprocessing as tp
+from sklearn.model_selection import train_test_split as tts
 
 import csv
 import os
@@ -52,7 +54,7 @@ def create_text_from_binary(row):
     
 def read_data_csv(dataName, dataRole, parker):
     """ get the dataset representing the ground truth values
-    Parameters:
+    Args:
         dataName (str): refers to the name representing the dataset
         dataRole (str): should be either "gs", "train", or "test"
         parker (Boolean): indicates whether get the dataset cleaned by Parker Engine 
@@ -88,17 +90,27 @@ def read_data_csv(dataName, dataRole, parker):
         print('--after delete', data.shape)
         return data
 
-def read_gs_csv(dataName):
+def train_test_split(data, label):
+        dtrain, dvalid = tts(data, test_size=0.1)
+        iter = 0
+        while len(dvalid[label].unique()) != len(dtrain[label].unique()):
+            dtrain, dvalid = tts(data, test_size=0.1)
+            iter += 1
+            print(str(iter) + "th iteration")
+        return dtrain, dvalid
+
+
+def read_gs_csv(dataset):
     """ get the dataset representing the ground truth values
-    Parameters:
+    Args:
         dataName (str): refers to the name representing the dataset
     Returns: gs (pandas.DataFrame) 
     """
-    return read_data_csv(dataName, "gs", False)
+    return read_data_csv(dataset["data_dir"], "gs", False)
                 
 def read_train_csv(dataset, parker):
     """ get the dataset representing the ground truth values
-    Parameters:
+    Args:
         dataName (str): refers to the name representing the dataset
         parker (Boolean): indicates whether get the dataset cleaned by Parker Engine
     Returns: gs (pandas.DataFrame) 
@@ -107,28 +119,30 @@ def read_train_csv(dataset, parker):
     dtrain = read_data_csv(dataset["data_dir"], "train", parker)
     return tp.get_encoded_labels(dtrain, dataset)
 
-def read_test_csv(dataName, parker):
-    return read_data_csv(dataName, "test", parker)
+def read_test_csv(dataset, parker):
+    return read_data_csv(dataset["data_dir"], "test", parker)
 
 
-def read_train_test_csv(dataName, parker):
+def read_train_test_csv(dataset, parker):
     labelEncoders = {}
     # read training dataset
-    dtrain, labelEncoders = read_train_csv(dataName, parker)
+    dtrain, labelEncoders = read_train_csv(dataset, parker)
     
     if len(labelEncoders) > 0: print(labelEncoders)
     
     # read test dataset
-    dtest = read_test_csv(dataName, parker)   
-    if dataName == "trials_design":
+    dtest = read_test_csv(dataset, parker)
+    # encode the labels if necessary
+    dtest[label] = dtest.map(labelEncoders[label])
+
+    # Domain checks constraints   
+    if dataset["data_dir"] == "trials_design":
         for label in labels:
-            # encode the labels if necessary
-            dtest[label] = dtest.map(labelEncoders[label])
             if label == 'arms':
                 # keep rows with only valid label values
-                df = df[(df['arms'] == labelEncoders[label]['2+']) | (df['arms'] == labelEncoders[label]['1'])| (df['arms'] == labelEncoders[label]['0'])]
+                dtrain = dtrain[(dtrain['arms'] == labelEncoders[label]['2+']) | (dtrain['arms'] == labelEncoders[label]['1'])| (df['arms'] == labelEncoders[label]['0'])]
             else: 
-                df = df[(df[label] == labelEncoders[label]['Yes']) | (df[label] == labelEncoders[label]['No'])]
+                dtrain = dtrain[(dtrain[label] == labelEncoders[label]['Yes']) | (dtrain[label] == labelEncoders[label]['No'])]
 
     return dtrain, dtest, labelEncoders
 
@@ -137,6 +151,7 @@ Trials_design = {
     "data_dir": 'trials_design',
     "error_types": ["inconsistencies"],
     "labels":['open', 'arms', 'double_blind', 'single_blind', 'controlled', 'parallel_group', 'crossover', 'randomised'],
+    "class_counts":[2,  3,  2,  2,  2,  2, 2, 2],
     "ml_task": "classification",
     "features":["title"],
     "keys":['eudract_number', 'protocol_country_code']
@@ -146,6 +161,7 @@ Trials_population = {
     "data_dir": 'trials_population',
     "error_types": ["inconsistencies"],
     "labels":['elderly',  'adults',  'adolescents',  'children',  'female',  'male', 'healthy_volunteers'],
+    "class_counts":[2,  2,  2,  2,  2,  2, 2],
     "ml_task": "classification",
     "features":["inclusion"],
     "keys":['eudract_number', 'protocol_country_code']
@@ -155,6 +171,7 @@ Allergens = {
     "data_dir": 'allergens',
     "error_types": ["inconsistencies"],
     "labels":['nuts', 'milk', 'gluten', 'soy', 'peanut', 'eggs'],
+    "class_counts":[3,  3,  3,  3,  3,  3],
     "ml_task": "classification",
     "features":["ingredients"],
     "keys":['code', 'source']

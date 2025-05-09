@@ -155,12 +155,3 @@ def expected_calibration_error(y_true, y_prob, v_class, n_bins=10):
             ece += np.abs(avg_confidence_in_bin - accuracy_in_bin) * prop_in_bin
 
     return ece, total_confidence/total_samples if total_samples > 0 else 0.0
-
-
-def avg_conf_correct_pred(y_orig, y_pred, proba, v_class):
-    correct_indices = (y_orig == y_pred) & (y_orig == v_class)   
-    correct_probs = proba[correct_indices]
-
-    if len(correct_probs) > 0:
-        return np.mean(correct_probs)
-    else: return 0.0

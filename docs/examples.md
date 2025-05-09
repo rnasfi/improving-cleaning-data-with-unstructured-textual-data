@@ -1,6 +1,6 @@
 The following dataset are composed of two parts :
-* structured tabular data
-** unstructured textual data
+	- structured tabular data
+	- unstructured textual data
 
 ### Eudract Trial design
 This dataset was obtained from the European Union Drug Regulating Authorities Clinical Trials Database ([EudraCT](https://eudract.ema.europa.eu/)) register 
@@ -11,7 +11,7 @@ Each clinical trial has a title that can help  find informative details about th
 ### Eudract Trials population
 This dataset delineates the demographic origins of participants in clinical trials primarily conducted across European countries. 
 This dataset include structured attributes indicating whether the trial pertains to a specific gender, age group or healthy volunteers. 
-Each of these categories is labeled as (`1') or (`0') respectively denoting whether it is included in the trials or not. 
+Each of these categories is labeled as ('1') or ('0') respectively denoting whether it is included in the trials or not. 
 It is important to note that the population category should remain consistent across all countries conducting the same clinical trial identified by an eudract_number. 
 The ground truth samples in the dataset were established by aligning information about the trial populations provided by external registries, specifically the [CT.gov](https://clinicaltrials.gov/) database and the [German Trials database](https://drks.de/search/en).  
 Additionally, the dataset comprises other unstructured attributes that categorize the inclusion criteria for trial participants such as inclusion.

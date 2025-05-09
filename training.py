@@ -135,19 +135,6 @@ def set_hyperparam_search(X_train, y_train, classifier, transformer, sampling, n
 
     return best_model, result
 
-def parse_searcher(searcher):
-    """Get results from gridsearch
-
-    Args:
-        searcher: GridSearchCV object
-    """
-    train_accs = searcher.cv_results_['mean_train_score']
-    val_accs = searcher.cv_results_['mean_test_score']
-    best_idx = searcher.best_index_ 
-    best_params = searcher.best_params_
-    train_acc, val_acc = train_accs[best_idx], val_accs[best_idx]
-    best_model = searcher.best_estimator_
-    return best_model, best_params, train_acc, val_acc
 
 def train(X_train, y_train, estimator, param_grid, seed=1, n_jobs=1, skip=False):
     """Train the model 
@@ -193,45 +180,5 @@ def train(X_train, y_train, estimator, param_grid, seed=1, n_jobs=1, skip=False)
     result = {"best_params": best_params, "train_acc":train_acc, "val_acc": val_acc}
     return best_model, result
 
-def get_param_grid(model, seed, n_jobs, n_class):
-    """Get hyper parameters (coarse random search) """
-    np.random.seed(seed)
-    param_grid = {}
-    
-    for hp in range(len(model['hyperparams'])):
-        if model["hyperparams_type"][hp] == "real":
-            low, high = model["hyperparams_range"][hp]
-            param_grid[model['hyperparams'][hp]] =  10 ** (-np.random.uniform(low, high, 3)) #model["hyperparams_range"][hp]  #
 
-        if model["hyperparams_type"][hp] == "int":
-            if model["name"] == "knn_classification":
-                high = min(high, int(N/5*4))
-        
-            if len(model["hyperparams_range"][hp]) == 2 : 
-                low, high = model["hyperparams_range"][hp]
-                nb = 3
-            else: low, high, nb = model["hyperparams_range"][hp]
-            param_grid[model['hyperparams'][hp]] = model["hyperparams_range"][hp]  #np.random.randint(low, high, nb)
 
-        if "objective" in model["hyperparams"][hp]:
-            if n_class == 2: 
-                param_grid[model['hyperparams'][hp]] = ['binary:logistic']
-            if n_class > 2:
-                param_grid[model['hyperparams'][hp]] = ['multi:softmax']
-
-    print(param_grid)
-
-def read_saved_hyperparms(dataset, model_name, label, param):
-    """Read the parameters for the best model """
-    para = {}	
-    f = open(f"./results/{dataset['data_dir']}/results_training_ml.json")
-    records = json.load(f)
-
-    if param == "hyperparameters":
-        para = records["with_constraints"][model_name][label]["best_params"]		
-    if param == "encoder":
-        if 'encoder' in records["with_constraints"][model_name][label]:
-            para = records["with_constraints"][model_name][label]['encoder'] 
-    f.close()
-    return para
-    return param_grid
