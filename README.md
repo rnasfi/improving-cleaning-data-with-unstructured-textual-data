@@ -86,15 +86,18 @@ $ chmod +x ./start_example.sh
 ```bash
 $ ./start_example.sh
 ```
+In the start example, you may modify the following line to execute which of the scripts in the example folder:
+```
+script = ./examples/[filename].py" 
+```
 
 ***
 # Complementaries
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## References
+ - Rihem Nasfi, Guy De Tré, and Antoon Bronselaer. "Improving data cleaning by learning from unstructured textual data", In: *IEEE Access* (**2025**), doi: https://doi.org/10.1109/ACCESS.2025.3543953.
+ - Antoon Bronselaer and Maribel Acosta, "Parker: Data fusion through consistent repairs using edit rules under partial keys", *Information Fusion*, (**2023**)
 
-## License
-For open source projects, say how it is licensed.
 
 ## Project status
 The project is still on progress.

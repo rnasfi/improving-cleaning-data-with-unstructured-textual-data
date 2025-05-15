@@ -1,7 +1,6 @@
 import os
 import pickle
 import logging
-import datetime
 import warnings
 
 import json
@@ -10,11 +9,7 @@ import csv
 
 from config import result_dir
 import model as m
-import dataset as dt
-import training as tr
 
-import evaluation as eva
-import preprocessing as tp
 from sklearn.metrics import accuracy_score
 
 class Evaluator:
@@ -28,72 +23,33 @@ class Evaluator:
                 encode (dict): map the attribute values (if not numerical) to numerical converted values
         """
         self.dataset = dataset
-        self.keys = dataset['keys']
-        self.partial_key = dataset['keys'][0]
-        self.label = attribute
-        self.features = dataset['features'][0]
-        self.dataName = dataset['data_dir']
-        self.parker = parker
-        self.model_name = model_name
+        self.data_index = self.dataset.data_index
+        self.keys = self.dataset.keys
+        self.partial_key = self.dataset.keys[0]
+        self.labels = self.dataset.labels
+        self.features = self.dataset.features
+        self.data_name = self.dataset.data_name
 
+        self.label = attribute
+
+        self.model_name = model_name
+        self.params_filename = f"./{result_dir}/{self.data_name}/{self.label}_results_training_ml.json"
+        self.avg_conf = None
+        
         self.data = None
         self.encoder = encoder
         
-        self.params_filename = f"./{result_dir}/{self.dataName}/{self.label}_results_training_ml.json"
-        self.statFile = f"./{result_dir}/{self.dataName}/{self.dataName}_stats_{self.model_name}_robustness.json"
-        
-        self.statistics = None
-        
+        self.strategy = "with_constraints"
         if parker:
             self.strategy = "with_parker"
-        else: 
-            self.strategy =  "with_constraints"        
- 
-    def get_vars(self, data, list_vars):
-        if list_vars == self.keys[1]:
-            return data[list_vars].value_counts().keys()
-        if list_vars == "attributes":
-            return data[label] # list of structured attributes
-        return []
+        self.model_parameters = self.load_training_parameters()
 
-    def load_training_parameters(self):
-        """
-            Results:
-                records (dict): {
-                    avg_proab (float): estimation of the ML model confidenc,
-                    encoders (dict): mapper of the (numerically) converted label values to their original value
-                    }
-        """
-        
-        try:
-            with open(self.params_filename, "r") as outfile:
-                records = json.load(outfile)
-                logging.debug("parameters file read successfully")
-                logging.info(' load training parameers from:  %s', self.params_filename)
-                logging.info(' parameters: \n %s', records)
-                outfile.close()
+        self.statFile = f"./{result_dir}/{self.data_name}/{self.data_name}_stats_{self.model_name}.json"
+        #trials_design_stats_tf-idf-xgboost_with_parker
 
-        except json.JSONDecodeError:
-            records = {} # Handle empty or invalid JSON          
-        return records        
-
-    def get_data_encoders(self):
-        """
-        Returns: encoders (dict): how each label to be repaired should be encoded according to the ML model
-        """
-        records = self.load_training_parameters()
-
-        encoder = {} 
-        if 'encoder' in records[self.model_name][self.strategy]:
-                self.encoder = records[self.model_name][self.strategy]['encoder']           
-        return encoder
-
-    def save_results(self):
-        
-        logging.info("read file: %s", self.statFile)
-        with open(statFile, "w") as outfile: 
-                json.dump(self.statistics, outfile)      
-
+    # ========================
+    # Predict the label values
+    # ========================   
     def test(self, model, data):
         """
             Test the ML model to predict the label
@@ -102,7 +58,7 @@ class Evaluator:
                 outputs (multidimension np.array)
                 accuracy (1D np.array)
         """
-        logging.info("read data for testing %s", dtest.shape)
+        logging.info("read data for testing %s", data.shape)
         X_test = data[self.features].str.lower() 
         y_pred = model.predict(X_test)
         
@@ -115,15 +71,88 @@ class Evaluator:
         data[self.label + '_orig'] = data[self.label]
 
         # compute the accuracy btw predicted & correct values
-        if len(self.encoder) > 0:
+        if self.encoder is not None and label in self.encoder:
+            # convert the ground truth label values to numerical values
             y_gs = data[f"{self.label}_gs"].map(self.encoder)
-            data[self.label]= tp.decode(self.encoder, self.label, y_pred)
+            # assign the label column the predicted values and put them as originally 
+            data[self.label]= self.dataset.decode(self.label, y_pred)
             accuracy = accuracy_score(y_gs, y_pred)
         else:
             accuracy = accuracy_score(data[f"{self.label}_gs"], y_pred)
             data[self.label]= y_pred
 
         return y_pred, dist_proba, accuracy
+
+    def assign_repair(self, dist_proba, y_orig, y_pred, th):
+        """
+        dist_proba (List): 2D list of probability distribution of for each label's possible classes
+        y_orig (List): list of label's real values
+        th (float): threshold of certainty 
+        Retruns (List[float]):
+        list of label's repaired values
+        """
+        final_predictions = []
+        for i, proba in enumerate(dist_proba):
+            if np.max(proba) >= th  or np.isnan(y_orig[i]):
+                final_predictions.append(y_pred[i])
+            else: final_predictions.append(y_orig[i])
+        return final_predictions
+
+
+    # =======================================
+    # Featch list of variables
+    # =======================================     
+    def get_vars(self, data, list_vars):
+        if list_vars == self.keys[1]:
+            return data[list_vars].value_counts().keys()
+        if list_vars == "attributes":
+            return data[label] # list of structured attributes
+        return []
+
+    # =======================================
+    # Load the persistent ML model parameters
+    # =======================================
+    def load_training_parameters(self):
+        """
+            Results:
+                records (dict): {
+                    avg_proab (float): estimation of the ML model confidenc,
+                    encoders (dict): mapper of the (numerically) converted label values to their original value
+                    }
+        """
+        try:
+            with open(self.params_filename, "r") as outfile:
+                records = json.load(outfile)
+                logging.debug("parameters file read successfully")
+                logging.info(' load training parameers from:  %s', self.params_filename)
+                logging.info(' parameters: \n %s', records)
+                self.avg_conf = round(records[self.model_name][self.strategy]['proba'],2)
+                
+                # kind of redudant instruction - to be assessed later
+                if 'encoder' in records[self.model_name][self.strategy]:
+                    self.encoder = records[self.model_name][self.strategy]['encoder']  
+                outfile.close()
+
+        except json.JSONDecodeError:
+            records = {} # Handle empty or invalid JSON  
+
+        return records        
+
+    def get_data_encoders(self):
+        """
+        Returns: encoders (dict): how each label to be repaired should be encoded according to the ML model
+        """
+        records = self.model_parameters
+        if 'encoder' in records[self.model_name][self.strategy]:
+                self.encoder = records[self.model_name][self.strategy]['encoder']           
+        return encoder
+
+    def save_results(self):  
+        logging.info("read file: %s", self.statFile)
+        with open(statFile, "w") as outfile: 
+                json.dump(self.statistics, outfile)      
+
+
 
     # ============================
     # Load the persistent ML model
@@ -136,92 +165,77 @@ class Evaluator:
         f.close()
         return model
 
-
-    # ==================================================================
-    # Empirical experiment to analyze the impact of different thresholds
-    # ==================================================================
-    def test_different_thrsholds(self, dtest):
+    # ============================
+    # Performance statsistics
+    # ============================
+    def get_metrics(self, y_pred, y_orig, y_gs):
         """
-            Varying the values of the thresholds 
-            to observe the evolution of the repair performance
-
-            Args:
-                self (Evaluator)
-            
-            Results:
-
+        y_pred (List): list of label's predicted values
+        y_orig (List): list of label's real values
+        y_gs (List): list of label's ground truth values 
+        Retruns (List[float]):
+        prediction metrics: precision, recall and F-1 score
         """
-        statistics = {}
-        records = self.load_training_parameters()
-
-        print('+++++++++++++++++++++Start+++++++++++++++++++++++++++++')
-
-        self.data = dtest.copy()
-        print(self.data.shape)
-
-        # test repaired by parker do not have the following columns: need to fix it!!
-        if self.label + '_gs'not in self.data.columns:
-            self.data = self.data.merge(dt.read_gs_csv(self.dataset)[[self.partial_key, self.label]], 
-                                  how='inner', on=self.partial_key, suffixes=('', '_gs'))
-
-        avg_proba = round(records[self.model_name][self.strategy]['proba'],2)
-
-        thresholds = [0, avg_proba] + [th for th in np.arange(0, 1.1, 0.2)]
-        thresholds.sort()
+        repairs = 0
+        errors = 0
+        correct_repairs = 0
+        precision = 0
+        recall = 0
+        f1 = 0
         
-        print('label', self.label, 'avg proba', avg_proba, 'ths', thresholds)
-        print('------ done loading ----------')
-        logging.info("Start at %s", datetime.datetime.now())
+        for i in range(len(y_pred)):
+            if y_pred[i] != y_orig[i]: repairs += 1
+            if y_orig[i] != y_gs[i]: errors += 1
+            if y_pred[i] != y_orig[i] and y_pred[i] == y_gs[i]: correct_repairs += 1
+        if repairs != 0: precision = round(correct_repairs/repairs, 2)
+        if errors != 0: recall = round(correct_repairs/errors, 2)
+        if precision != 0 or recall != 0: f1 = round(2 * (precision * recall)/(precision + recall), 2)
+        print('correct repair', correct_repairs, 'repairs', repairs, 'errors', errors)
+        return precision, recall, f1
 
-        # get the encoder if exists and encode y_orig  y_gs
-        enc = {}
-        enc, y_orig, y_gs = tp.encode(self.encoder, self.label, self.data)
-        print('encoder', enc, self.encoder)
-        print("------ done encoding ----------")
-        logging.info("------ done encoding ----------")      
-            
-        # predict the values for the labels to be repaired
-        y_pred, outputs, accuracy = self.test(self.load_model(), self.data)
-        print("------ done predicting ----------")
-        logging.info("------ done predicting ----------")
+    def get_stats(self, y_pred, y_orig, y_gs):
+        """ Provide some statistics about the repairs per cells
+        
+        y_pred (List): list of label's predicted values
+        y_orig (List): list of label's real values
+        y_gs (List): list of label's ground truth values
 
-        # make a copy in the dataset about the original values
-        if self.label + '_orig' not in self.data.columns:
-            self.data = self.data.merge(self.data[[self.partial_key, self.label]], 
-                                  how='inner', on=self.partial_key, suffixes=('', '_orig')) 
-            print('current columns:', self.data.columns)
-            
-        repairs = []
-        correct_repairs = []
-        precisions = []
-        recalls = []
-        f1s = []
-
-        # evaluate on ground truth
-        for th in  thresholds: 
-            y_repair = eva.assign_repair(outputs, y_orig.values, y_pred, th)
-            # statistics
-            correct_repair, repair, errors = eva.get_stats(y_repair, y_orig.values, y_gs.values)
-            correct_repairs.append(correct_repair)
-            repairs.append(repair)
-
-            # metrics
-            metrics = eva.get_metrics(y_repair, y_orig.values, y_gs.values)
-            recalls.append(round(metrics[1],2))
-            precisions.append(round(metrics[0],2))
-            f1s.append(round(metrics[2],2))
-
-            print('confidence threshold', th, )
-            print('statistics: correct_repairs, repairs, errors', metrics)
+        Retruns (List[int]):
+        prediction statistics: number of correct repairs, number of repairs and number of erroneous cells
+        """    
+        repairs = 0
+        errors = 0
+        correct_repairs = 0    
+        
+        for i in range(len(y_pred)):
+            if y_pred[i] != y_orig[i]: repairs += 1
+            if y_orig[i] != y_gs[i]: 
+                errors += 1
+            if y_pred[i] != y_orig[i] and y_pred[i] == y_gs[i]: correct_repairs += 1
+            #if y_pred[i] == y_gs[i]: print(i)
+        
+        return correct_repairs, repairs, errors
 
 
-        statistics = {"errors": errors, "avg_proba": avg_proba,\
-                    "threshold": [round(th,2) for th in thresholds], 
-                    'repairs': repairs, 'correct_repairs': correct_repairs, 
-                    "precision": precisions, "recall": recalls, "F-1": f1s}
-        print(f"+++++++++++++++++++++done with {self.label}+++++++++++++++++++++++++++++")
-        print()
+    def save_statistics(self, statistics, key):
+        # dump json object or append it to existing one
+        if os.path.exists(self.statFile):
+            with open(self.statFile, "r") as outfile:
+                try:
+                    records = json.load(outfile)
+                    outfile.close()
+                except json.JSONDecodeError:
+                    records = {} # Handle empty or invalid JSON
+        else:
+            records = {}
 
-    def get_metrics(self):
+        # add object assignd for the attribute subject to repair
+        # including the empirical results of thresholds
+        records[key] = statistics
+
+        logging.info("recorded labels: %s", records.keys())
+
+        with open(self.statFile, "w") as outfile:
+            json.dump(records, outfile)
+            outfile.close() 
             return 0
-

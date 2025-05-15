@@ -2,7 +2,9 @@
 # Set & move to home directory
 source ./set_env.sh
 
-script="./examples/allergens.py" # trials_design  trials_population allergens
+# script="./examples/trials_design.py" 
+# script="./examples/trials_population.py" 
+script="./examples/allergens.py" 
 # script="./tests/check_results.py --data_index=2"
 if [ $# -eq 1 ] ; then
   script="$1"

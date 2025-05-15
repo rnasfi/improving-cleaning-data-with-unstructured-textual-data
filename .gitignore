@@ -1,8 +1,7 @@
 __pycache__
 *.ipynb_checkpoints
-models
-previous
-to.zip
+*models/
+preprocessing
 
 *.idea
 *.log
@@ -12,7 +11,11 @@ to.zip
 *_static
 *_templates
 *.DS_store
+# virtual environment
 *.venv
+*ump/
+
+# cache folders
 *.swp
 *.pyc
 *.cache/
@@ -28,6 +31,5 @@ to.zip
 
 # Holoclean specific files
 *debug/
-*.others
+*.others/
 others
-

@@ -1,10 +1,10 @@
 import model as m
 import dataset as dt
 import edit_rules as er
-import preprocessing as tp
 from config import result_dir, ir_th, root_seed, n_resplit, n_retrain, compensators
 
 import numpy as np
+import pandas as pd
 import os
 import json
 import pickle
@@ -19,17 +19,17 @@ from sklearn.feature_selection import SelectKBest, chi2
 import pickle
 
 class ML_trainer:
-    def __init__(self, dataset_index, label, lang, alg, encoder=None, parker=False):
+    def __init__(self, dataset, label, lang, alg, encoder=None, parker=False):
         """
         dataset (dict): a set of metadata about the repaired dataset        
         """
-        self.dataset = dt.datasets[dataset_index]
-        self.data_index = dataset_index
-        self.keys = self.dataset['keys']
-        self.partial_key = self.dataset['keys'][0]
-        self.labels = self.dataset['labels']
-        self.features = self.dataset['features'][0]
-        self.dataName = self.dataset['data_dir']
+        self.dataset = dataset
+        self.data_index = self.dataset.data_index
+        self.keys = self.dataset.keys
+        self.partial_key = self.dataset.keys[0]
+        self.labels = self.dataset.labels
+        self.features = self.dataset.features
+        self.data_name = self.dataset.data_name
         self.label = label
         self.model_name = m.get_modelName(lang, alg)
         self.transformer = m.text_transformer(lang)
@@ -41,24 +41,31 @@ class ML_trainer:
         self.n_jobs = n_retrain
         self.cv = n_resplit
         self.ir = 1
-        self.params_filename = f"./{result_dir}/{self.dataName}/{self.label}_results_training_ml.json"
+        self.imb_params = {}        
+
+        self.params_filename = f"./{result_dir}/{self.data_name}/{self.label}_results_training_ml.json"
         if parker:
             self.strategy = "with_parker"
         else: 
             self.strategy =  "with_constraints"
 
         self.start_time = None
-        self.confidence = 0.0        
+        self.confidence = 0.0
 
     def train(self, data, gridsearch=False):
         self.start_time = datetime.datetime.now()
+
+        if self.encoder is not None:
+            data[self.label].map(self.encoder)
+            logging.info(" label training values %s", data[self.label].unique())
+
         
         logging.debug("read data for training %d", data.shape)
         dtrain, dvalid = dt.train_test_split(data, self.label)
         logging.debug("split the data into train (%s) and valid (%s) data ", dtrain.shape, dvalid.shape)
         
         dtrain =  self.get_cleaner_train_version(dtrain)                   
-        logging.info("selected data train: %s", dtrain.shape)                    
+        logging.info("selected data train: %s", dtrain.shape)
         
         batch_size = dtrain.shape[0]
         # Loop through DataFrame in chunks without numpy
@@ -109,9 +116,11 @@ class ML_trainer:
         if "parallelable" in self.classifier.keys() and self.classifier['parallelable']:
             fixed_params["n_jobs"] = n_jobs
 
+        print(self.imb_params)
         if hyperparams is not None:
             if "hyperparams_type" in self.classifier and self.classifier["hyperparams_type"] == "int":
                 hyperparams[self.classifier["hyperparams"]] = int(hyperparams[self.classifier["hyperparams"]])
+
             fixed_params.update(hyperparams)
         if fixed_params is not None: 
             logging.info("fixed_parameters updated: \n %s", fixed_params)    
@@ -129,8 +138,11 @@ class ML_trainer:
     # Sample selection for training
     #==================================================
     def get_cleaner_train_version(self, train_data):
+        # remove nan values
+        train_data.dropna(subset=[self.partial_key, self.features, self.label], inplace=True)
+
         # selection rules validation
-        if self.dataName == "trials_design":     
+        if self.data_name == "trials_design":     
             for i in range(len(er.trials_rules)):
                 if self.label in list(er.trials_rules[i].keys()):
                     train_data = train_data[~(train_data[list(pd.Series(er.trials_rules[i]).keys())].
@@ -199,7 +211,7 @@ class ML_trainer:
         # train and tune hyper parameter with 5-fold cross validation
         if param_grid is not None:
             searcher = GridSearchCV(self.estimator, param_grid, cv= self.cv, n_jobs=self.n_jobs, 
-            	return_train_score=True, scoring='accuracy', verbose=10, error_score='raise')
+            	return_train_score=True, scoring='accuracy', verbose=10, error_score='raise')            
             searcher.fit(X_train, y_train, clf__sample_weight = sample_weights)
             best_model, best_params, train_acc, val_acc = self.parse_searcher(searcher)
         else: 
@@ -276,12 +288,14 @@ class ML_trainer:
         # predict the probability distribution for each prediction
         outputs = best_model.predict_proba(X_valid.str.lower())
 
-        
-        for i in range(len(set(y_valid))):# iterate over the number of classes
-                probabilities = outputs[:, i]  # Probabilities for the positive class (class 1)
-                outputs = best_model.predict_proba(X_valid.str.lower())
-                acf = self.avg_conf_correct_pred(y_valid, y_pred, probabilities, i)
-                avg_confidence.append(acf)
+        try:
+            for i in range(len(set(y_valid))):# iterate over the number of classes
+                    probabilities = outputs[:, i]  # Probabilities for the positive class (class 1)
+                    outputs = best_model.predict_proba(X_valid.str.lower())
+                    acf = self.avg_conf_correct_pred(y_valid, y_pred, probabilities, i)
+                    avg_confidence.append(acf)
+        except IndexError:
+            logging.error("outputs: %s - y_valid: %s", outputs.shape, len(set(y_valid)))
 
         conf_avg = lambdac * sum(avg_confidence)/len(avg_confidence)
         logging.info('avg proba %f', conf_avg)
@@ -307,13 +321,13 @@ class ML_trainer:
 
 		'''
         # Compute the imbalance ratio
-        imb_params = self.compute_imbalance_ratio(y)  
+        self.imb_params = self.compute_imbalance_ratio(y)  
 		
-        logging.info("imbalance ratio: %s- unique_classes: %s - class_counts: %s ", imb_params['ir'], 
-        	imb_params['unique_classes'], imb_params['class_counts'])
+        logging.info("imbalance ratio: %s- unique_classes: %s - class_counts: %s ", self.imb_params['ir'], 
+        	self.imb_params['unique_classes'], self.imb_params['class_counts'])
 		
-        class_weights = {c: len(y) / (count * imb_params['n_class']) for c, count in zip(imb_params['unique_classes'], 
-        	imb_params['class_counts'])}
+        class_weights = {c: len(y) / (count * self.imb_params['n_class']) for c, count in zip(self.imb_params['unique_classes'], 
+        	self.imb_params['class_counts'])}
 	    
         sample_weights = np.array([class_weights[class_label] for class_label in y])
 
@@ -332,7 +346,7 @@ class ML_trainer:
 					'ir': imbalance ratio
 				}
         '''		
-        n_class, unique_classes, class_counts, ir = tp.get_class_stats(y)
+        n_class, unique_classes, class_counts, ir = self.dataset.get_class_stats(y)
         self.ir = ir
         print('imbalance ratio', ir, 'unique_classes', unique_classes, 'class_counts', class_counts)
         print('---------------------------')
@@ -376,7 +390,7 @@ class ML_trainer:
         record_per_strategy[self.strategy] = {}
 
         # persist the label encoder
-        if len(self.encoder) > 0:
+        if self.encoder is not None:
             record_per_strategy[self.strategy]['encoder'] = self.encoder
         
         # optimal hyperparameters
@@ -429,3 +443,10 @@ class ML_trainer:
                     records = {} # Handle empty or invalid JSON              
         
         return param_grid
+
+    def train_nn():
+        # ML model based on BERT and Neural Network
+        model, epochs = nn.NN_train(dtrain, label, ir, unique_classes, bert_model_name, learning_rate, num_epochs, features, config.root_seed)
+        result_per_label['epochs'] = epochs
+        # save the ML-based pipeline
+        torch.save(model, file_model_name)
