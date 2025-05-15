@@ -47,7 +47,7 @@ if __name__ == '__main__':
 	dataset = config.datasets[data_index]
 	partial_key = dataset['keys'][0]
 	labels = dataset['labels']
-	label = labels[random.randint(0, len(labels) - 1)]
+	label = labels[random.randint(0, len(labels) - 1)] #'arms' #
 	feature = dataset['features'][0]
 	dataName = dataset['data_name']
 
@@ -74,15 +74,20 @@ if __name__ == '__main__':
 	dtrain, enc = dtt.read_train_csv()
 	dtest = dtt.read_test_csv()
 
-	 # # train ML model
-	 for l in   [label]:
-	 	mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], enc[l], args.parker)
-	 	estimator, train_results = mltt.train(dtrain.iloc[0:10000], args.grid_search) # let op!!
-	 	print("result of training", train_results)
-	 	print("enc", enc)
-	 	logging.info(" label test values %s", dtest[l + '_gs'].map(enc[l]).unique())
-	 	print("(estimation) test accuracy", estimator.score(dtest[feature], dtest[l + '_gs'].map(enc[l])))
+	# # # train ML model
+	for l in labels:
+		mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], enc[l], args.parker)
+		try:
+		    file_model_name = f"./models/_{l}_classifier_{mltt.model_name}_{mltt.strategy}.pth"
+		    with open(file_model_name, 'rb') as f:
+		        estimator = pickle.load(f)
+		        f.close()
+		except (FileNotFoundError, IOError): 
+		    print("Model not found")
 
+		else: 
+			estimator, train_results = mltt.train(dtrain, args.grid_search)
+			print("result of training", train_results)
 
 	print('Done with training the model')
 	print('---------------------------')

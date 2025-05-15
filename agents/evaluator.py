@@ -45,6 +45,7 @@ class Evaluator:
         self.model_parameters = self.load_training_parameters()
 
         self.statFile = f"./{result_dir}/{self.data_name}/{self.data_name}_stats_{self.model_name}.json"
+        #trials_design_stats_tf-idf-xgboost_with_parker
 
     # ========================
     # Predict the label values
@@ -84,11 +85,11 @@ class Evaluator:
 
     def assign_repair(self, dist_proba, y_orig, y_pred, th):
         """
-        dist_proba (List): 2D list of probability distribution of for each label's possible classes
-        y_orig (List): list of label's real values
-        th (float): threshold of certainty 
-        Retruns (List[float]):
-        list of label's repaired values
+            dist_proba (List): 2D list of probability distribution of for each label's possible classes
+            y_orig (List): list of label's real values
+            th (float): threshold of certainty 
+            Retruns (List[float]):
+            list of label's repaired values
         """
         final_predictions = []
         for i, proba in enumerate(dist_proba):

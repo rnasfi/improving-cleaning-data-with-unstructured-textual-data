@@ -3,15 +3,18 @@ import logging
 import argparse
 import random
 import config
+import pickle
 
 # cutomized libraries
 import model as mdl
 import dataset as dt
+# from agents import evaluator as evals
 from agents import repairer as rep
 from agents import ML_trainer as mlt
 
 def set_dir(folder_dir=None):
     """Set a new directory or path given dataset
+
     Args:
         folder (string): raw/missing_values/outliers/duplicates/inconsistency/mislabel
     """
@@ -22,7 +25,6 @@ def set_dir(folder_dir=None):
 set_dir("logs")
 set_dir("results")
 set_dir("models")
-
 #Configure logging 
 logging.basicConfig(filename='./logs/allergens_logs.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.basicConfig(filename='./logs/allergens_warning_logs.log', level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -75,9 +77,18 @@ if __name__ == '__main__':
 	# train ML model
 	for l in labels:
 		mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], None, args.parker)
-		estimator, train_results = mltt.train(dtrain, args.grid_search)
-		print("result of training", train_results)
+		try:
+		    file_model_name = f"./models/_{l}_classifier_{mltt.model_name}_{mltt.strategy}.pth"
+		    with open(file_model_name, 'rb') as f:
+		        estimator = pickle.load(f)
+		        f.close()
+		except (FileNotFoundError, IOError): 
+		    print("Model not found")
 
+		else: 
+			estimator, train_results = mltt.train(dtrain, args.grid_search)
+			print("result of training", train_results)
+	# 	# break
 
 	print('Done with training the model')
 	print('---------------------------')

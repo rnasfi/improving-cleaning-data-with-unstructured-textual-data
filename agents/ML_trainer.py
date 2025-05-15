@@ -99,11 +99,6 @@ class ML_trainer:
 		Results:
 			estimator (sklearn.Pipline): ML model
         '''
-        # if gridsearch:
-        #     hyperparams = self.read_saved_hyperparms("hyperparameters")		
-        # else:
-        #     hyperparams = None
-
         sampler = RandomOverSampler()
         trans = self.transformer["fn"](**self.transformer["fixed_params"])
 
@@ -115,7 +110,6 @@ class ML_trainer:
         if "parallelable" in self.classifier.keys() and self.classifier['parallelable']:
             fixed_params["n_jobs"] = n_jobs
 
-        print(self.imb_params)
         if hyperparams is not None:
             if "hyperparams_type" in self.classifier and self.classifier["hyperparams_type"] == "int":
                 hyperparams[self.classifier["hyperparams"]] = int(hyperparams[self.classifier["hyperparams"]])
@@ -124,6 +118,7 @@ class ML_trainer:
         if fixed_params is not None: 
             logging.info("fixed_parameters updated: \n %s", fixed_params)    
         clf = self.classifier["fn"](**fixed_params)
+
 
         # should decide btw sampler or sample weight
         return Pipeline([('vect',trans), ('clf', clf),]) 

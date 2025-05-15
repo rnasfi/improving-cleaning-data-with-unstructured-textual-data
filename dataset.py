@@ -212,6 +212,7 @@ class Dataset:
                 data = data[~(data[self.partial_key].isin(gs[self.partial_key]))]
             
             if data_role == "test":
+                #data = data.merge(gs, how='inner', on=self.partial_key, suffixes=('', '_gs'))
                 data = data[data[self.partial_key].isin(gs[self.partial_key])]            
         
             logging.info(f'\n -- {data_role}: after removing missing and duplicates rows {data.shape}')
