@@ -1,11 +1,9 @@
 from agents import evaluator as eva
 import model as mdl
-# import dataset as dt
-
 
 import time
-import warnings
 import logging
+import warnings
 import datetime
 import numpy as np
 
@@ -46,7 +44,6 @@ class Repairer:
         print(f"{label}-auxiliary accuracy = {accuracy}")
         print("------ done prdicting ----------")
 
-        # self.data[label] = self.vals_pred[label]
         print(f"attribute values size: {len(self.vals_pred[label])}, gs attribute values size: {len(self.vals_orig[label])}")
        
         self.vals_repair[label] = evaluator.assign_repair(self.dist_probabs[label], self.vals_orig[label], self.vals_pred[label], th)
@@ -154,7 +151,6 @@ class Repairer:
         """
         statistics = {}
 
-        # source = self.keys[1]      
         cols = [self.partial_key, self.features, self.keys[1]]
         
         sources = self.data[self.keys[1]].value_counts().keys()
@@ -205,13 +201,10 @@ class Repairer:
                 logging.info(statistics)
                 print(f"+++++++++++++++++++++done with {a} ({ind + 1})+++++++++++++++++++++++++++++")
                 print()
-
-        #         # if ind > 1 : break             
+            
             print('+++++++++++++++++++++more sources+++++++++++++++++++++++++++++')
             print()
-            # break
         print(statistics)
-
         evaluator.save_statistics(statistics, 'nb_sources')
         return statistics 
 
@@ -254,7 +247,6 @@ class Repairer:
             if self.vals_orig[label][i] != self.vals_gs[label][i]: 
                 errors += 1
             if self.vals_repair[label][i] != self.vals_orig[label][i] and self.vals_repair[label][i] == self.vals_gs[label][i]: correct_repairs += 1
-            #if self.vals_repair[label][i] == self.vals_gs[label][i]: print(i)
 
         return correct_repairs, repairs, errors
 
@@ -262,8 +254,6 @@ class Repairer:
     # Set the dataset and the values to evaluate the repair performance
     # ==================================================================
     def set_label_values(self, label, data=None):
-
-
         # test repaired by parker do not have the following columns: need to fix it!!
         if label + '_gs'not in self.data.columns:
             self.data = self.data.merge(self.dataset.read_gs_csv()[[self.partial_key, label]], 
@@ -272,17 +262,11 @@ class Repairer:
         if label + '_orig' not in self.data.columns:
             self.data = self.data.merge(self.data[[self.partial_key, label]], 
                                   how='inner', on=self.partial_key, suffixes=('', '_orig')) 
-        # print('current columns:', self.data.columns)
-        
+       
         if data is None:
             data  = self.data        
 
         # assign `self.vals_orig' the "first originally" attribute values and `self.vals_gs' the "ground truth" values
         # by using "encode()" function, we check whether thes two list of values should be converted numerically or not
         self.vals_orig[label], self.vals_gs[label] = self.dataset.encode(label, data)
-        # print('orig + gs', self.vals_orig[label], self.vals_gs[label])
-
-        # self.vals_orig[label] = data[label]
-        # self.vals_gs[label] = data[label + '_gs']
-        # print(f"{label}-encoder: {self.encoders[label]}")
-        # print("------ done encoding (if needed) ----------")           
+         

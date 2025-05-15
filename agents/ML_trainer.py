@@ -89,7 +89,6 @@ class ML_trainer:
         self.confidence = self.compute_confidence_thershold(dvalid, best_model, compensators[self.data_index])
  
         self.save_model(best_model)
-        # json.dump(result, open(self.params_filename, 'w'), indent=4)
         self.save_parameters(compensators[self.data_index], result)
 
         return best_model, result

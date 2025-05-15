@@ -45,7 +45,6 @@ class Evaluator:
         self.model_parameters = self.load_training_parameters()
 
         self.statFile = f"./{result_dir}/{self.data_name}/{self.data_name}_stats_{self.model_name}.json"
-        #trials_design_stats_tf-idf-xgboost_with_parker
 
     # ========================
     # Predict the label values

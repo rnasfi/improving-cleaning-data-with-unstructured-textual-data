@@ -1,3 +1,4 @@
+import os
 import logging
 import argparse
 import random
@@ -6,9 +7,21 @@ import config
 # cutomized libraries
 import model as mdl
 import dataset as dt
-# from agents import evaluator as evals
 from agents import repairer as rep
 from agents import ML_trainer as mlt
+
+def set_dir(folder_dir=None):
+    """Set a new directory or path given dataset
+    Args:
+        folder (string): raw/missing_values/outliers/duplicates/inconsistency/mislabel
+    """
+    if not os.path.exists(folder_dir):
+    	os.makedirs(folder_dir)
+    return folder_dir
+
+set_dir("logs")
+set_dir("results")
+set_dir("models")
 
 #Configure logging 
 logging.basicConfig(filename='./logs/allergens_logs.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -59,12 +72,12 @@ if __name__ == '__main__':
 	dtrain, encoders = dtt.read_train_csv()
 	dtest = dtt.read_test_csv()
 
-	# # train ML model
-	# for l in   labels: #[label]: #
-	# 	mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], None, args.parker)
-	# 	estimator, train_results = mltt.train(dtrain, args.grid_search)
-	# 	print("result of training", train_results)
-	# 	# break
+	# train ML model
+	for l in labels:
+		mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], None, args.parker)
+		estimator, train_results = mltt.train(dtrain, args.grid_search)
+		print("result of training", train_results)
+
 
 	print('Done with training the model')
 	print('---------------------------')

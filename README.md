@@ -14,11 +14,10 @@ An overview of the data cleaning data is decribed [here](docs/approach.md)
 ## Getting started
 
 This project is written in Python.
-To run it, as of version 3.8.10, and different python libraries (requirement.txt).
+To run it, as of version 3.8.10, and different python libraries (requirement_v8.txt).
 
 Just pull the code from this repository and install locally the used libraries such as pandas, etc.
 Click on the hyperlinks to see example code.
-
 
 ```
 cd existing_repo
@@ -68,7 +67,7 @@ When you are done, deactivate it using*
 *depending on your version*.
 
 In the project root directory, run the following to install the required packages.
-Note that this commands installs the packages within the activated virtual environment.
+Note that this commands installs the packages within the activated virtual environment (Python 3.8).
 
 ```bash
 $ pip install -r ./requirements/requirements_v8.txt

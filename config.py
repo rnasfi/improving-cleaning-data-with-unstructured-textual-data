@@ -8,6 +8,7 @@ import model
 data_dir = 'data' # dir storing data
 result_dir = 'results' # dir saving experiment results
 plot_dir = 'plot' # dir saving plots
+logs_dir = 'logs'
 
 
 # =============================================================================

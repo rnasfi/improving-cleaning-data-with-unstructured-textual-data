@@ -1,3 +1,4 @@
+import os
 import logging
 import argparse
 import random
@@ -6,10 +7,23 @@ import config
 # cutomized libraries
 import model as mdl
 import dataset as dt
-from agents import evaluator as evals
+# from agents import evaluator as evals
 from agents import repairer as rep
 from agents import ML_trainer as mlt
 
+def set_dir(folder_dir=None):
+    """Set a new directory or path given dataset
+
+    Args:
+        folder (string): raw/missing_values/outliers/duplicates/inconsistency/mislabel
+    """
+    if not os.path.exists(folder_dir):
+    	os.makedirs(folder_dir)
+    return folder_dir
+
+set_dir("logs")
+set_dir("results")
+set_dir("models")
 #Configure logging 
 logging.basicConfig(filename='./logs/trials_design_logs.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logging.basicConfig(filename='./logs/trials_design_logs.log', level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -33,7 +47,7 @@ if __name__ == '__main__':
 	dataset = config.datasets[data_index]
 	partial_key = dataset['keys'][0]
 	labels = dataset['labels']
-	label = labels[random.randint(0, len(labels) - 1)] #'arms' #
+	label = labels[random.randint(0, len(labels) - 1)]
 	feature = dataset['features'][0]
 	dataName = dataset['data_name']
 
@@ -60,15 +74,15 @@ if __name__ == '__main__':
 	dtrain, enc = dtt.read_train_csv()
 	dtest = dtt.read_test_csv()
 
-	# # # train ML model
-	# for l in   [label]: #labels: # 
-	# 	mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], enc[l], args.parker)
-	# 	estimator, train_results = mltt.train(dtrain.iloc[0:10000], args.grid_search) # let op!!
-	# 	print("result of training", train_results)
-	# 	print("enc", enc)
-	# 	logging.info(" label test values %s", dtest[l + '_gs'].map(enc[l]).unique())
-	# 	print("(estimation) test accuracy", estimator.score(dtest[feature], dtest[l + '_gs'].map(enc[l])))
-	# 	break
+	 # # train ML model
+	 for l in   [label]:
+	 	mltt = mlt.ML_trainer(dtt, l, trans["name"], alg["name"], enc[l], args.parker)
+	 	estimator, train_results = mltt.train(dtrain.iloc[0:10000], args.grid_search) # let op!!
+	 	print("result of training", train_results)
+	 	print("enc", enc)
+	 	logging.info(" label test values %s", dtest[l + '_gs'].map(enc[l]).unique())
+	 	print("(estimation) test accuracy", estimator.score(dtest[feature], dtest[l + '_gs'].map(enc[l])))
+
 
 	print('Done with training the model')
 	print('---------------------------')
